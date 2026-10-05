@@ -625,25 +625,23 @@
     if (!cfg || !cfg.url || cfg.url === '#') { focusTile(curRow, curCol); return; }
     var url = cfg.url;
 
-    /* 在用户手势的同步调用里预留一个新标签页（about:blank），保证不被浏览器拦截；
-       动画播放完后再把该标签导航到目标网址。 */
-    var win = null;
-    try { win = window.open('about:blank', '_blank'); } catch (e) { win = null; }
-
-    if (win && !win.closed)
+    /* 在当前页完整播放动画（动画期间当前页保持聚焦，确保能看到动画），
+       动画定格后再打开目标网页。此时仍在用户交互的短暂激活窗口内，
+       浏览器会放行新标签；若被严格拦截，则退回当前页跳转以保证能打开。 */
+    playTileAnimation(t, function ()
     {
-      playTileAnimation(t, function ()
+      var win = null;
+      try { win = window.open(url, '_blank'); } catch (e) { win = null; }
+      if (win)
       {
-        /* 断开与当前页的 opener 关联（安全），再跳转到目标网址 */
-        try { win.opener = null; win.location.href = url; } catch (e) {}
-      });
-    }
-    else
-    {
-      /* 浏览器不支持预留空标签：改为同步直接打开真实链接，保证一定能打开 */
-      try { window.open(url, '_blank', 'noopener'); } catch (e) {}
-      playTileAnimation(t, null);
-    }
+        /* 断开与当前页的 opener 关联，避免目标站点反向操作导航页 */
+        try { win.opener = null; } catch (e) {}
+      }
+      else
+      {
+        try { location.href = url; } catch (e) {}
+      }
+    });
   }
 
   function onClick(evt)
