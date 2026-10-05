@@ -348,24 +348,27 @@
   var CONFIG =
   {
     /* 右上角显示的用户名与头像（emoji 或图片 URL） */
-    userName: 'NAS 之家',
+    userName: '我的导航',
     userAvatar: '🏠',        // 传图片 URL 时请改成 url，例如 "https://.../user.png"
 
     /* 每个磁贴：{ title 标题, url 链接, color 底色, icon 图标(emoji), wide 是否宽磁贴(跨两列) }
-     * url 可填 http(s) 链接；填 "" 或 "#" 时点击为占位(不跳转)。
-     * 把 <NAS-IP> 替换为你飞牛 NAS 的真实地址即可。 */
+     * url 填 http(s) 链接；填 "" 或 "#" 时点击为占位(不跳转)。
+     * 默认是一组常用网站；可按同样格式增删磁贴，或把某磁贴 url 改成本机/内网服务地址。 */
     tiles: [
-      { title: '控制台',    url: 'http://<NAS-IP>:5666',   color: '#0067b8', icon: '🖥️', wide: false },
-      { title: '文件管理',  url: 'http://<NAS-IP>:5666/file', color: '#00809d', icon: '🗂️', wide: false },
-      { title: '影视中心',  url: 'http://<NAS-IP>:5666/movies', color: '#008a00', icon: '🎬', wide: false },
-      { title: '相册',      url: 'http://<NAS-IP>:5666/album', color: '#e81123', icon: '📷', wide: false },
-      { title: '应用中心',  url: 'http://<NAS-IP>:5666/apps', color: '#5c007d', icon: '📦', wide: false },
-      { title: 'Docker',    url: 'http://<NAS-IP>:5666/docker', color: '#1e90ff', icon: '🐳', wide: false },
-      { title: '系统设置',  url: 'http://<NAS-IP>:5666/system', color: '#d24726', icon: '⚙️', wide: false },
-      { title: '网盘',      url: 'http://<NAS-IP>:5666/cloud', color: '#00b294', icon: '☁️', wide: false },
-      { title: '音乐',      url: 'http://<NAS-IP>:5666/music', color: '#d13438', icon: '🎵', wide: false },
-      { title: '哔哩哔哩',  url: 'https://www.bilibili.com', color: '#fb7299', icon: '📺', wide: true },
-      { title: '搜索',      url: 'https://www.bing.com', color: '#0f4c81', icon: '🔍', wide: true }
+      { title: '百度',      url: 'https://www.baidu.com',      color: '#2932e1', icon: '🔍' },
+      { title: '新浪',      url: 'https://www.sina.com.cn',    color: '#e6162d', icon: '📰' },
+      { title: '搜狐',      url: 'https://www.sohu.com',       color: '#ef3b3b', icon: '📰' },
+      { title: '腾讯',      url: 'https://www.qq.com',         color: '#12b7f5', icon: '🐧' },
+      { title: '网易',      url: 'https://www.163.com',        color: '#e60012', icon: '📧' },
+      { title: '哔哩哔哩',  url: 'https://www.bilibili.com',   color: '#fb7299', icon: '📺', wide: true },
+      { title: '优酷',      url: 'https://www.youku.com',      color: '#1e90ff', icon: '▶️' },
+      { title: '爱奇艺',    url: 'https://www.iqiyi.com',      color: '#00b050', icon: '🎬' },
+      { title: '淘宝',      url: 'https://www.taobao.com',     color: '#ff5000', icon: '🛒' },
+      { title: '京东',      url: 'https://www.jd.com',         color: '#e81123', icon: '🛍️', wide: true },
+      { title: '微博',      url: 'https://weibo.com',          color: '#d24726', icon: '📣' },
+      { title: '知乎',      url: 'https://www.zhihu.com',      color: '#0084ff', icon: '💡' },
+      { title: '抖音',      url: 'https://www.douyin.com',     color: '#0f4c81', icon: '🎵' },
+      { title: '必应搜索',  url: 'https://www.bing.com',       color: '#00809d', icon: '🔎', wide: true }
     ]
   };
 
