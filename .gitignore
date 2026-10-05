@@ -4,3 +4,13 @@
 # 编辑器
 .vscode/
 .idea/
+
+# 本地工具与临时调研文件
+fnpack
+gist_info.json
+tile-animation.html
+.tmp-tool-results/
+
+# 编译产物（二进制可由 server/main.go 编译得到，且已包含在 fpk 内）
+server/metro-server
+metro-launcher/app/server/metro-server

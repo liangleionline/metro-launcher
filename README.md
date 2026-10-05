@@ -43,14 +43,16 @@ fnpack build        # 生成 metro-launcher.fpk（位于 metro-launcher/ 目录�
 1. 打开飞牛「应用中心」→ 手动安装，上传生成的 `.fpk`；
 2. 安装完成后，从桌面图标或浏览器访问 `http://<NAS-IP>:5080`。
 
-> 应用基于 `nginx:alpine` 容器，监听宿主 5080 端口，把 `app/docker/web/index.html` 挂载进容器。
+> **原生应用，不依赖 Docker**：内置一个 Go 编译的静态文件服务器（单二进制、无外部依赖、静态链接），安装后直接监听宿主 5080 端口服务页面。安装过程**无需联网拉取任何镜像**。
 
 ## 目录结构
 
 ```
 ├── index.html               # 单文件导航首页（浏览器直接打开）
-├── metro-launcher/          # 飞牛 fnOS fpk 应用工程
-│   ├── app/docker/          # Docker 编排 + web 静态页
+├── server/main.go           # 内置静态文件服务器源码（Go）
+├── metro-launcher/          # 飞牛 fnOS fpk 应用工程（原生，不依赖 Docker）
+│   ├── app/server/          # 编译后的自包含静态服务器（linux/amd64）
+│   ├── app/web/             # 导航首页静态文件
 │   ├── config/              # 权限与资源声明
 │   ├── cmd/                 # 生命周期脚本
 │   └── manifest             # 应用元信息
