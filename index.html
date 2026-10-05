@@ -535,12 +535,13 @@
     var cfg = CONFIG.tiles[idx];
     if (!cfg || !cfg.url || cfg.url === '#') { focusTile(curRow, curCol); return; }
 
+    /* 必须在用户手势的同步调用里 window.open，否则会被浏览器拦截为自动弹窗。
+       （原实现把它放进 setTimeout，导致链接没打开、只有放大动画播放而后消失） */
+    window.open(cfg.url, '_blank', 'noopener');
+
+    /* 打开链接后播放放大反馈动画 */
     t.classList.add('opening');
-    setTimeout(function ()
-    {
-      window.open(cfg.url, '_blank', 'noopener');
-      setTimeout(function () { t.classList.remove('opening'); }, 300);
-    }, 240);
+    setTimeout(function () { t.classList.remove('opening'); }, 300);
   }
 
   function onClick(evt)
