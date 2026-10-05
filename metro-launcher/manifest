@@ -1,5 +1,5 @@
 appname               = metro-launcher
-version               = 1.0.4
+version               = 1.0.5
 display_name          = Metro Launcher
 desc                  = Windows 8 开始屏幕风格导航首页：可作浏览器首页 / NAS 导航 / 电视遥控器导航（原生应用，不依赖 Docker）
 platform              = x86

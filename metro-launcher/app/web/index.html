@@ -308,36 +308,26 @@
     z-index: 50;
   }
 
-  /* 点击磁贴后的“翻转 → 拉伸到全屏”过渡层 */
+  /* 点击磁贴后的“翻转 → 拉伸到全屏”过渡层（仅底色铺满，图标保持小） */
   .tile-tv
   {
     position: fixed;
     z-index: 9999;
     left: 0; top: 0;
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     will-change: transform, opacity;
     box-shadow: 0 0 40px rgba(0,0,0,0.35);
   }
-  .tile-tv .tv-inner
+  .tile-tv-icon
   {
+    position: fixed;
+    z-index: 10000;
+    line-height: 1;
     text-align: center;
     color: #ffffff;
-  }
-  .tile-tv .tv-icon
-  {
-    font-size: 96px;
-    line-height: 1;
     filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35));
-  }
-  .tile-tv .tv-subject
-  {
-    margin-top: 14px;
-    font-family: 'Segoe UI Semilight', 'Segoe UI', 'Microsoft YaHei', sans-serif;
-    font-weight: 300;
-    font-size: 34px;
+    pointer-events: none;
+    will-change: left, top, opacity;
   }
 </style>
 </head>
@@ -569,9 +559,9 @@
     var face = tile.querySelector('.tile-face');
     var color = face ? window.getComputedStyle(face).backgroundColor : '#0067b8';
     var iconEl = tile.querySelector('.tile-icon');
-    var titleEl = tile.querySelector('.tile-subject');
+    var icon = iconEl ? iconEl.textContent : '';
 
-    /* 创建从磁贴位置开始、逐渐放大覆盖全屏的过渡层 */
+    /* 底色层：仅色块本身翻转、铺满全屏（图标独立保持小尺寸，不随之放大） */
     var tv = document.createElement('div');
     tv.className = 'tile-tv';
     tv.style.left = rect.left + 'px';
@@ -579,38 +569,47 @@
     tv.style.width = rect.width + 'px';
     tv.style.height = rect.height + 'px';
     tv.style.background = color;
-
-    var inner = document.createElement('div');
-    inner.className = 'tv-inner';
-    var iEl = document.createElement('div'); iEl.className = 'tv-icon';
-    iEl.textContent = iconEl ? iconEl.textContent : '';
-    var sEl = document.createElement('div'); sEl.className = 'tv-subject';
-    sEl.textContent = titleEl ? titleEl.textContent : '';
-    inner.appendChild(iEl); inner.appendChild(sEl);
-    tv.appendChild(inner);
     document.body.appendChild(tv);
+
+    /* 小图标层：固定小尺寸，从磁贴内位置平移到屏幕中央，保持视觉大小不变 */
+    var ICON_SIZE = 46;
+    var ic = document.createElement('div');
+    ic.className = 'tile-tv-icon';
+    ic.textContent = icon;
+    ic.style.fontSize = ICON_SIZE + 'px';
+    ic.style.width = ICON_SIZE + 'px';
+    ic.style.left = (rect.left + rect.width / 2 - ICON_SIZE / 2) + 'px';
+    ic.style.top = (rect.top + 28) + 'px';
+    document.body.appendChild(ic);
+
     void tv.offsetWidth; /* reflow，确保起始状态生效 */
 
-    var scale = Math.max(window.innerWidth / rect.width, window.innerHeight / rect.height) * 1.03;
+    var full = Math.max(window.innerWidth / rect.width, window.innerHeight / rect.height) * 1.03;
     tv.style.transformOrigin = 'center center';
-    /* 节奏对齐原作者的 View Transition 动画：总时长 400ms，160ms(40%) 处磁贴翻到半程 */
+    /* 节奏对齐原作者的 View Transition 动画：总时长 400ms，160ms(40%) 处翻到半程 */
     tv.style.transition = 'transform 0.16s cubic-bezier(.3,.8,.3,1)';
-    /* 阶段1（0–160ms）：磁贴“翻起”并放大，对应原动画 tile-flip 前 40% */
-    tv.style.transform = 'rotateY(90deg) scale(1.8)';
+    /* 阶段1（0–160ms）：底色色块“翻起”，对应原动画 tile-flip 前 40% */
+    tv.style.transform = 'rotateY(90deg) scale(1.15)';
 
     setTimeout(function ()
     {
-      /* 阶段2（160–400ms）：正面展开并拉伸到覆盖全屏，对应原动画 app-display 40%→100% */
+      /* 阶段2（160–400ms）：底色正面展开、铺满全屏，对应原动画 app-display 40%→100% */
       tv.style.transition = 'transform 0.24s cubic-bezier(.2,.7,.3,1)';
-      tv.style.transform = 'rotateY(0deg) scale(' + scale + ')';
+      tv.style.transform = 'rotateY(0deg) scale(' + full + ')';
+      /* 小图标同步平移到屏幕中央，但尺寸保持不变 */
+      ic.style.transition = 'left 0.24s cubic-bezier(.2,.7,.3,1), top 0.24s cubic-bezier(.2,.7,.3,1)';
+      ic.style.left = (window.innerWidth / 2 - ICON_SIZE / 2) + 'px';
+      ic.style.top = (window.innerHeight / 2 - ICON_SIZE / 2) + 'px';
     }, 160);
 
     setTimeout(function ()
     {
       if (done) done();                 /* 400ms 全屏定格后打开目标网页 */
-      tv.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+      tv.style.transition = 'opacity 0.25s ease';
       tv.style.opacity = '0';
-      setTimeout(function () { tv.remove(); }, 280);
+      ic.style.transition = 'opacity 0.25s ease';
+      ic.style.opacity = '0';
+      setTimeout(function () { tv.remove(); ic.remove(); }, 280);
     }, 400);
   }
 
