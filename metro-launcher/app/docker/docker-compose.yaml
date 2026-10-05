@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  metro-launcher:
+    image: nginx:alpine
+    container_name: metro-launcher
+    ports:
+      - "5080:80"
+    volumes:
+      - "./web:/usr/share/nginx/html:ro"
+    restart: always

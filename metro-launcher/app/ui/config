@@ -1,0 +1,13 @@
+{
+    ".url": {
+        "metro-launcher.Application": {
+            "title": "Metro Launcher",
+            "icon": "images/icon_{0}.png",
+            "type": "iframe",
+            "protocol": "http",
+            "port": "5080",
+            "url": "/",
+            "allUsers": true
+        }
+    }
+}

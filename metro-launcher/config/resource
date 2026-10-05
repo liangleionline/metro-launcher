@@ -1,0 +1,20 @@
+{
+  "docker-project": {
+    "projects": [
+      {
+        "name": "metro-launcher",
+        "path": "docker"
+      }
+    ]
+  },
+  "data-share": {
+    "shares": [
+      {
+        "name": "metro-launcher"
+      },
+      {
+        "name": "metro-launcher/data"
+      }
+    ]
+  }
+}

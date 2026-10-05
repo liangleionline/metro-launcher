@@ -1,0 +1,8 @@
+{
+    "defaults":
+    {
+        "run-as": "package"
+    },
+    "username": "docker-metro-launcher",
+    "groupname": "docker-metro-launcher"
+}

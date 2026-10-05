@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><!--
+=============================================================================
+ Windows 8 “开始”屏幕风格导航首页  (Metro Launcher)
+=============================================================================
+ 视觉实现基于 GeeLaw 的开源作品（MIT License）：
+   https://gist.github.com/GeeLaw/bc61a3f724d45b9e9df9faf8044312d8
+   Copyright (c) 2025 Ji Luo
+ 本项目在此之上做了“导航首页”化改造：
+   - 移除本地文件路径，改用纯 CSS 渐变背景与内联图标
+   - 磁贴由配置数组驱动，每个磁贴可指向任意链接（NAS / 电视服务 / 工具）
+   - 点击磁贴：放大过渡动画后在新标签页打开目标链接
+   - 增加键盘 / 遥控器方向键导航（←↑↓→ 移动焦点，Enter 打开）
+   - 响应式缩放，适配电脑浏览器与电视浏览器（含 4K）
+   - 顶部显示当前日期时间，营造 Win8 桌面氛围
+=============================================================================
+--><head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="SKYPE_TOOLBAR" content="SKYPE_TOOLBAR_PARSER_COMPATIBLE" />
+<title>Start · Metro Launcher</title>
+<style>
+  *
+  {
+    font-family: inherit;
+    -moz-box-sizing: inherit;
+    -webkit-box-sizing: inherit;
+    box-sizing: inherit;
+    -ms-high-contrast-adjust: inherit;
+  }
+  html
+  {
+    -ms-high-contrast-adjust: auto;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    background: #180052;
+  }
+  html, body
+  {
+    font-size: 16px;
+    line-height: 1.6;
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #180052;
+  }
+
+  /* ===== 整体舞台：基准 1366x768，JS 按窗口等比缩放并居中 ===== */
+  #stage
+  {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: 1366px;
+    height: 768px;
+    transform-origin: center center;
+    overflow: hidden;
+  }
+
+  /* ===== Windows 8 沉浸式启动器 ===== */
+  #launcher
+  {
+    position: relative;
+    z-index: 1;
+    width: 1366px;
+    height: 768px;
+    user-select: none;
+    -webkit-user-select: none;
+    background-color: #180052;
+    background-image:
+      linear-gradient(180deg, rgba(24,0,82,0.30) 0%, rgba(24,0,82,0.92) 100%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='600'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%2314063d'/><stop offset='1' stop-color='%23300b7a'/></linearGradient></defs><rect width='800' height='600' fill='url(%23g)'/></svg>");
+    background-size: cover;
+    background-position: center;
+  }
+
+  /* 顶部栏 */
+  .launcher-topbar
+  {
+    position: absolute;
+    z-index: 5;
+    left: 0; right: 0; top: 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 80px 0 120px;
+  }
+  .launcher-title
+  {
+    font-family: 'Segoe UI Semilight', 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    font-weight: 300;
+    font-size: 48px;
+    line-height: 56px;
+    color: #ffffff;
+    letter-spacing: 0;
+  }
+  .launcher-user
+  {
+    display: flex;
+    align-items: center;
+    color: #ffffff;
+  }
+  .launcher-clock
+  {
+    text-align: right;
+    margin-right: 16px;
+    font-family: 'Segoe UI Semilight', 'Segoe UI', sans-serif;
+    font-weight: 300;
+    line-height: 1.25;
+  }
+  .launcher-clock .c-time
+  {
+    display: block;
+    font-size: 30px;
+  }
+  .launcher-clock .c-date
+  {
+    display: block;
+    font-size: 15px;
+    opacity: 0.85;
+  }
+  .launcher-user .user-name
+  {
+    font-family: 'Segoe UI Semilight', 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    font-weight: 300;
+    font-size: 20px;
+    margin-right: 14px;
+    text-align: right;
+  }
+  .launcher-avatar
+  {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    background: rgba(255,255,255,0.12);
+  }
+
+  /* ===== 可横向滚动的磁贴区域 ===== */
+  .launcher-scroll
+  {
+    position: absolute;
+    z-index: 1;
+    left: 0; right: 0; top: 0; bottom: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    perspective: 1px;
+    scrollbar-width: thin;
+  }
+  .launcher-scroll::-webkit-scrollbar { height: 10px; }
+  .launcher-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.25); }
+  .launcher-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35); border-radius: 5px; }
+
+  /* 视差背景层 */
+  .launcher-bg
+  {
+    position: absolute;
+    left: 0; right: 0; top: -80px; bottom: -80px;
+    transform: translateZ(-4px) scale(5);
+    width: 6830px;
+    background-image: inherit;
+    background-repeat: repeat-x;
+    background-size: cover;
+    opacity: 0.9;
+  }
+
+  .launcher-content
+  {
+    position: absolute;
+    top: 0; left: 120px;
+    padding-top: 96px;
+    height: 650px;
+  }
+
+  /* ===== 磁贴网格：Windows 8 六列布局，支持横向滚动 ===== */
+  #tileGrid
+  {
+    display: grid;
+    grid-template-columns: repeat(6, 154px);
+    grid-auto-rows: 154px;
+    gap: 8px 0;
+    column-gap: 0;
+    width: max-content;
+    padding-bottom: 40px;
+  }
+
+  .tile
+  {
+    position: relative;
+    padding: 2px;
+    height: 154px;
+    margin: 0;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* 宽磁贴跨两列（宽度由 grid 拉伸决定） */
+  .tile.wide
+  {
+    grid-column: span 2;
+  }
+  .tile:hover, .tile.focused
+  {
+    background: rgba(255,255,255,0.30);
+  }
+  .tile.focused
+  {
+    background: rgba(255,255,255,0.40);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.85);
+  }
+
+  /* 按压反馈：根据按压位置，磁贴向不同方向放大（保留原版效果） */
+  .tile-pressed { transform: perspective(1px) scale(1.92) translateZ(-1px); transform-origin: center center; }
+  .tile-pressed-n { transform: perspective(1px) rotateX(0.01deg) scale(2) translateZ(-1px); transform-origin: center bottom; }
+  .tile-pressed-e { transform: perspective(1px) rotateY(0.01deg) scale(2) translateZ(-1px); transform-origin: left center; }
+  .tile-pressed-w { transform: perspective(1px) rotateY(-0.01deg) scale(2) translateZ(-1px); transform-origin: right center; }
+  .tile-pressed-s { transform: perspective(1px) rotateX(-0.01deg) scale(2) translateZ(-1px); transform-origin: center top; }
+  .tile-pressed-ne { transform: perspective(1px) rotateX(0.01deg) rotateY(0.01deg) scale(2.04) translateZ(-1px); transform-origin: left bottom; }
+  .tile-pressed-nw { transform: perspective(1px) rotateX(0.01deg) rotateY(-0.01deg) scale(2.04) translateZ(-1px); transform-origin: right bottom; }
+  .tile-pressed-se { transform: perspective(1px) rotateX(-0.01deg) rotateY(0.01deg) scale(2.04) translateZ(-1px); transform-origin: left top; }
+  .tile-pressed-sw { transform: perspective(1px) rotateX(-0.01deg) rotateY(-0.01deg) scale(2.04) translateZ(-1px); transform-origin: right top; }
+
+  .tile-face
+  {
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(255,255,255,0.20);
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .tile-shine
+  {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 6px;
+    background: linear-gradient(60deg, rgba(0,0,0,0.10) 0%, rgba(255,255,255,0.15) 100%);
+    display: flex;
+    flex-direction: column;
+  }
+  .tile-icon
+  {
+    width: 64px;
+    height: 64px;
+    margin: 21px auto 6px;
+    font-size: 40px;
+    line-height: 64px;
+    text-align: center;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+  }
+  .tile-subject
+  {
+    height: 24px;
+    padding-left: 14px;
+    padding-top: 4px;
+    line-height: 16px;
+    font-size: 14px;
+    font-family: 'Segoe UI Semilight', 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    font-weight: 300;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  /* 底部提示 */
+  .launcher-footer
+  {
+    position: absolute;
+    z-index: 5;
+    left: 120px; bottom: 22px;
+    color: rgba(255,255,255,0.55);
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    font-size: 13px;
+  }
+  .launcher-footer kbd
+  {
+    background: rgba(255,255,255,0.15);
+    border-radius: 3px;
+    padding: 0 5px;
+    margin: 0 2px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+  }
+
+  /* 点击磁贴时的放大过渡 */
+  @keyframes tile-open
+  {
+    0%   { transform: scale(1); opacity: 1; }
+    100% { transform: scale(2.6); opacity: 0; }
+  }
+  .tile.opening
+  {
+    animation: tile-open 260ms ease-in forwards;
+    z-index: 50;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="launcher">
+    <div class="launcher-topbar">
+      <div class="launcher-title">Start</div>
+      <div class="launcher-user">
+        <div class="launcher-clock">
+          <span class="c-time" id="clockTime">--:--</span>
+          <span class="c-date" id="clockDate"></span>
+        </div>
+        <div class="user-name" id="userName">用户</div>
+        <div class="launcher-avatar" id="userAvatar">👤</div>
+      </div>
+    </div>
+
+    <div class="launcher-scroll" id="scrollBox">
+      <div class="launcher-bg" id="bgLayer"></div>
+      <div class="launcher-content">
+        <div id="tileGrid"></div>
+      </div>
+    </div>
+
+    <div class="launcher-footer">
+      <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> 移动 · <kbd>Enter</kbd> 打开
+    </div>
+  </div>
+</div>
+
+<script>
+(function ()
+{
+  'use strict';
+
+  /* ===================================================================
+   * 配置区 —— 修改这里即可定制你自己的导航首页
+   * =================================================================== */
+  var CONFIG =
+  {
+    /* 右上角显示的用户名与头像（emoji 或图片 URL） */
+    userName: 'NAS 之家',
+    userAvatar: '🏠',        // 传图片 URL 时请改成 url，例如 "https://.../user.png"
+
+    /* 每个磁贴：{ title 标题, url 链接, color 底色, icon 图标(emoji), wide 是否宽磁贴(跨两列) }
+     * url 可填 http(s) 链接；填 "" 或 "#" 时点击为占位(不跳转)。
+     * 把 <NAS-IP> 替换为你飞牛 NAS 的真实地址即可。 */
+    tiles: [
+      { title: '控制台',    url: 'http://<NAS-IP>:5666',   color: '#0067b8', icon: '🖥️', wide: false },
+      { title: '文件管理',  url: 'http://<NAS-IP>:5666/file', color: '#00809d', icon: '🗂️', wide: false },
+      { title: '影视中心',  url: 'http://<NAS-IP>:5666/movies', color: '#008a00', icon: '🎬', wide: false },
+      { title: '相册',      url: 'http://<NAS-IP>:5666/album', color: '#e81123', icon: '📷', wide: false },
+      { title: '应用中心',  url: 'http://<NAS-IP>:5666/apps', color: '#5c007d', icon: '📦', wide: false },
+      { title: 'Docker',    url: 'http://<NAS-IP>:5666/docker', color: '#1e90ff', icon: '🐳', wide: false },
+      { title: '系统设置',  url: 'http://<NAS-IP>:5666/system', color: '#d24726', icon: '⚙️', wide: false },
+      { title: '网盘',      url: 'http://<NAS-IP>:5666/cloud', color: '#00b294', icon: '☁️', wide: false },
+      { title: '音乐',      url: 'http://<NAS-IP>:5666/music', color: '#d13438', icon: '🎵', wide: false },
+      { title: '哔哩哔哩',  url: 'https://www.bilibili.com', color: '#fb7299', icon: '📺', wide: true },
+      { title: '搜索',      url: 'https://www.bing.com', color: '#0f4c81', icon: '🔍', wide: true }
+    ]
+  };
+
+  /* ===================================================================
+   * 渲染磁贴
+   * =================================================================== */
+  var grid     = document.getElementById('tileGrid');
+  var tiles    = [];        // 渲染出的 .tile DOM 集合
+  var matrix   = [];        // [row][col] -> tile 索引（用于方向键导航）
+
+  function buildGrid()
+  {
+    grid.innerHTML = '';
+    tiles = [];
+    matrix = [];
+    var col = 0, row = 0;
+    CONFIG.tiles.forEach(function (t, i)
+    {
+      var tEl = document.createElement('div');
+      tEl.className = 'tile' + (t.wide ? ' wide' : '');
+      tEl.setAttribute('tabindex', '0');
+      tEl.setAttribute('data-index', i);
+      if (t.wide) tEl.setAttribute('data-wide', '1');
+
+      var face = document.createElement('div');
+      face.className = 'tile-face' + (t.wide ? ' wide' : '');
+      face.style.background = t.color;
+      face.style.color = '#ffffff';
+
+      var shine = document.createElement('div');
+      shine.className = 'tile-shine';
+
+      var icon = document.createElement('div');
+      icon.className = 'tile-icon';
+      icon.textContent = t.icon || '';
+
+      var subject = document.createElement('div');
+      subject.className = 'tile-subject';
+      subject.textContent = t.title;
+
+      shine.appendChild(icon);
+      shine.appendChild(subject);
+      face.appendChild(shine);
+      tEl.appendChild(face);
+      grid.appendChild(tEl);
+
+      tiles.push(tEl);
+    });
+
+    // 生成 6 列的导航矩阵（宽磁贴占两列）
+    var cols = 6;
+    col = 0; row = 0;
+    CONFIG.tiles.forEach(function (t, i)
+    {
+      var span = t.wide ? 2 : 1;
+      if (col + span > cols) { row++; col = 0; }
+      if (!matrix[row]) matrix[row] = [];
+      for (var c = 0; c < span; c++) matrix[row][col + c] = i;
+      col += span;
+      if (col >= cols) { col = 0; row++; }
+    });
+  }
+
+  /* ===================================================================
+   * 键盘 / 遥控器方向键导航
+   * =================================================================== */
+  var curRow = 0, curCol = 0, curTile = null;
+
+  function focusTile(row, col)
+  {
+    var idx = matrix[row] && matrix[row][col];
+    if (idx === undefined || idx === null) return false;
+    var t = tiles[idx];
+    if (curTile) curTile.classList.remove('focused');
+    curTile = t; curRow = row; curCol = col;
+    t.classList.add('focused');
+    t.focus();
+    ensureVisible(t);
+    return true;
+  }
+
+  function ensureVisible(t)
+  {
+    var box = document.getElementById('scrollBox');
+    var b = t.getBoundingClientRect();
+    var sb = box.getBoundingClientRect();
+    var pad = 16;
+    if (b.left < sb.left + 80) box.scrollLeft -= (sb.left + 80 - b.left);
+    else if (b.right > sb.right - 80) box.scrollLeft += (b.right - (sb.right - 80));
+  }
+
+  function move(dir)
+  {
+    var r = curRow, c = curCol;
+    var best = null;
+    // 上/下：在当前列附近寻找最近可用磁贴
+    if (dir === 'up')   { for (var rr = r - 1; rr >= 0; rr--) { if (tryFocusRow(rr, c, 'up')) return; } return; }
+    if (dir === 'down') { for (var rr = r + 1; rr < matrix.length; rr++) { if (tryFocusRow(rr, c, 'down')) return; } return; }
+    if (dir === 'left') { if (c - 1 >= 0 && matrix[r][c - 1] !== undefined) focusTile(r, c - 1); return; }
+    if (dir === 'right'){ if (c + 1 < 6  && matrix[r][c + 1] !== undefined) focusTile(r, c + 1); return; }
+  }
+
+  function tryFocusRow(rr, c, dir)
+  {
+    // 在目标行优先选最接近当前列 c 的可用格
+    var rowArr = matrix[rr]; if (!rowArr) return false;
+    var bestIdx = -1, bestDist = 99;
+    for (var cc = 0; cc < rowArr.length; cc++)
+    {
+      if (rowArr[cc] !== undefined && rowArr[cc] !== null)
+      {
+        var d = Math.abs(cc - c);
+        if (d < bestDist) { bestDist = d; bestIdx = cc; }
+      }
+    }
+    if (bestIdx >= 0) { focusTile(rr, bestIdx); return true; }
+    return false;
+  }
+
+  /* ===================================================================
+   * 按压反馈（保留原版：按点击位置决定放大方向）
+   * =================================================================== */
+  var pressedTile = null, pressedEffect = '', lastPressedTile = null;
+
+  function hidePressed()
+  {
+    if (!pressedTile) return;
+    pressedTile.classList.remove('tile-pressed','tile-pressed-n','tile-pressed-e',
+      'tile-pressed-w','tile-pressed-s','tile-pressed-ne','tile-pressed-nw',
+      'tile-pressed-se','tile-pressed-sw');
+  }
+  function showPressed()
+  {
+    hidePressed();
+    if (pressedTile && pressedEffect) pressedTile.classList.add(pressedEffect);
+  }
+
+  function onPointerDown(evt)
+  {
+    hidePressed(); lastPressedTile = null;
+    pressedTile = document.elementFromPoint(evt.clientX, evt.clientY);
+    while (pressedTile && !pressedTile.classList.contains('tile'))
+      pressedTile = pressedTile.parentElement;
+    if (!pressedTile) return;
+    document.getElementById('launcher').setPointerCapture && evt.pointerId &&
+      document.getElementById('launcher').setPointerCapture(evt.pointerId);
+
+    var b = pressedTile.getBoundingClientRect();
+    if (!(b.width >= 1) || !(b.height >= 1)) { pressedTile = null; return; }
+    lastPressedTile = pressedTile;
+    var sx = 4 * (evt.clientX - b.left) / b.width - 2;
+    var sy = 4 * (evt.clientY - b.top)  / b.height - 2;
+    sx = (sx < -1 ? 'w' : sx > 1 ? 'e' : '');
+    sy = (sy < -1 ? 'n' : sy > 1 ? 's' : '');
+    pressedEffect = (sx === '' && sy === '' ? 'tile-pressed' : 'tile-pressed-' + sy + sx);
+    showPressed();
+  }
+  function onPointerUp() { hidePressed(); pressedTile = null; }
+
+  /* ===================================================================
+   * 打开磁贴
+   * =================================================================== */
+  function openTile(t)
+  {
+    if (!t) return;
+    var idx = +t.getAttribute('data-index');
+    var cfg = CONFIG.tiles[idx];
+    if (!cfg || !cfg.url || cfg.url === '#') { focusTile(curRow, curCol); return; }
+
+    t.classList.add('opening');
+    setTimeout(function ()
+    {
+      window.open(cfg.url, '_blank', 'noopener');
+      setTimeout(function () { t.classList.remove('opening'); }, 300);
+    }, 240);
+  }
+
+  function onClick(evt)
+  {
+    var clicked = document.elementFromPoint(evt.clientX, evt.clientY);
+    while (clicked && !clicked.classList.contains('tile'))
+      clicked = clicked.parentElement;
+    if (clicked && clicked === lastPressedTile) openTile(clicked);
+  }
+
+  /* ===================================================================
+   * 事件绑定
+   * =================================================================== */
+  var launcher = document.getElementById('launcher');
+  launcher.addEventListener('pointerdown', onPointerDown, true);
+  launcher.addEventListener('pointerup', onPointerUp, true);
+  launcher.addEventListener('pointercancel', onPointerUp, true);
+  launcher.addEventListener('click', onClick, true);
+
+  // 键盘方向键 + 回车（电脑键盘 / 电视遥控器方向键）
+  document.addEventListener('keydown', function (evt)
+  {
+    var k = evt.key;
+    if (k === 'ArrowUp')    { move('up');    evt.preventDefault(); }
+    else if (k === 'ArrowDown')  { move('down');  evt.preventDefault(); }
+    else if (k === 'ArrowLeft')  { move('left');  evt.preventDefault(); }
+    else if (k === 'ArrowRight') { move('right'); evt.preventDefault(); }
+    else if (k === 'Enter')  { if (curTile) openTile(curTile); evt.preventDefault(); }
+  });
+
+  // 磁贴获得焦点时同步高亮（兼容 Tab 键 / 遥控器）
+  grid.addEventListener('focusin', function (evt)
+  {
+    if (evt.target.classList.contains('tile'))
+    {
+      var idx = +evt.target.getAttribute('data-index');
+      if (curTile) curTile.classList.remove('focused');
+      curTile = evt.target; curTile.classList.add('focused');
+      // 反查行列
+      for (var r = 0; r < matrix.length; r++)
+        for (var c = 0; c < matrix[r].length; c++)
+          if (matrix[r][c] === idx) { curRow = r; curCol = c; }
+    }
+  });
+
+  /* ===================================================================
+   * 时钟
+   * =================================================================== */
+  function pad(n){ return (n<10?'0':'')+n; }
+  function tickClock()
+  {
+    var d = new Date();
+    document.getElementById('clockTime').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    var wd = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][d.getDay()];
+    document.getElementById('clockDate').textContent =
+      (d.getMonth()+1) + '月' + d.getDate() + '日 ' + wd;
+  }
+  setInterval(tickClock, 1000);
+  tickClock();
+
+  /* ===================================================================
+   * 用户栏
+   * =================================================================== */
+  document.getElementById('userName').textContent = CONFIG.userName;
+  var av = document.getElementById('userAvatar');
+  if (/^https?:\/\//.test(CONFIG.userAvatar)) av.innerHTML = '<img src="'+CONFIG.userAvatar+'" style="width:44px;height:44px;border-radius:50%">';
+  else av.textContent = CONFIG.userAvatar;
+
+  /* ===================================================================
+   * 响应式缩放：以 1366x768 为基准等比缩放到窗口
+   * =================================================================== */
+  var stage = document.getElementById('stage');
+  function fit()
+  {
+    var s = Math.min(window.innerWidth / 1366, window.innerHeight / 768);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  /* 初始化：构建磁贴并聚焦第一个 */
+  buildGrid();
+  focusTile(0, 0);
+})();
+</script>
+</body>
+</html>

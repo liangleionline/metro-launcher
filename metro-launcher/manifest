@@ -1,0 +1,10 @@
+appname               = metro-launcher
+version               = 1.0.0
+display_name          = Metro Launcher
+desc                  = Windows 8 开始屏幕风格导航首页：可作浏览器首页 / NAS 导航 / 电视遥控器导航
+platform              = x86
+source                = thirdparty
+maintainer            = liangleionline
+distributor           = liangleionline
+desktop_uidir         = ui
+desktop_applaunchname = metro-launcher.Application
