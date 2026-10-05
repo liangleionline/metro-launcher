@@ -593,24 +593,25 @@
 
     var scale = Math.max(window.innerWidth / rect.width, window.innerHeight / rect.height) * 1.03;
     tv.style.transformOrigin = 'center center';
-    tv.style.transition = 'transform 0.30s cubic-bezier(.3,.8,.3,1)';
-    /* 阶段1：磁贴“翻起”并放大 */
-    tv.style.transform = 'rotateY(90deg) scale(1.7)';
+    /* 节奏对齐原作者的 View Transition 动画：总时长 400ms，160ms(40%) 处磁贴翻到半程 */
+    tv.style.transition = 'transform 0.16s cubic-bezier(.3,.8,.3,1)';
+    /* 阶段1（0–160ms）：磁贴“翻起”并放大，对应原动画 tile-flip 前 40% */
+    tv.style.transform = 'rotateY(90deg) scale(1.8)';
 
     setTimeout(function ()
     {
-      /* 阶段2：翻回正面并拉伸到覆盖全屏 */
-      tv.style.transition = 'transform 0.32s cubic-bezier(.2,.7,.3,1)';
+      /* 阶段2（160–400ms）：正面展开并拉伸到覆盖全屏，对应原动画 app-display 40%→100% */
+      tv.style.transition = 'transform 0.24s cubic-bezier(.2,.7,.3,1)';
       tv.style.transform = 'rotateY(0deg) scale(' + scale + ')';
-    }, 300);
+    }, 160);
 
     setTimeout(function ()
     {
-      if (done) done();                 /* 全屏定格后打开目标网页 */
-      tv.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+      if (done) done();                 /* 400ms 全屏定格后打开目标网页 */
+      tv.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
       tv.style.opacity = '0';
-      setTimeout(function () { tv.remove(); }, 380);
-    }, 640);
+      setTimeout(function () { tv.remove(); }, 280);
+    }, 400);
   }
 
   /* ===================================================================

@@ -37,8 +37,11 @@ tiles: [
 cd metro-launcher
 # 若未安装打包工具，先下载 fnpack：
 #   https://developer.fnnas.com/docs/cli/fnpack
-fnpack build        # 生成 metro-launcher.fpk（位于 metro-launcher/ 目录）
+fnpack build        # 生成 metro-launcher.fpk
+mv metro-launcher.fpk metro-launcher-v1.0.3.fpk   # 重命名为带版本号的文件名
 ```
+
+> 每次发布都会自动递增版本号（当前 1.0.3），Release 中的安装包文件名为 `metro-launcher-v<版本>.fpk`，方便直接覆盖升级、区分版本。
 
 1. 打开飞牛「应用中心」→ 手动安装，上传生成的 `.fpk`；
 2. 安装完成后，从桌面图标或浏览器访问 `http://<NAS-IP>:5080`。
