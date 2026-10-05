@@ -307,6 +307,38 @@
     animation: tile-open 260ms ease-in forwards;
     z-index: 50;
   }
+
+  /* 点击磁贴后的“翻转 → 拉伸到全屏”过渡层 */
+  .tile-tv
+  {
+    position: fixed;
+    z-index: 9999;
+    left: 0; top: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    will-change: transform, opacity;
+    box-shadow: 0 0 40px rgba(0,0,0,0.35);
+  }
+  .tile-tv .tv-inner
+  {
+    text-align: center;
+    color: #ffffff;
+  }
+  .tile-tv .tv-icon
+  {
+    font-size: 96px;
+    line-height: 1;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35));
+  }
+  .tile-tv .tv-subject
+  {
+    margin-top: 14px;
+    font-family: 'Segoe UI Semilight', 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    font-weight: 300;
+    font-size: 34px;
+  }
 </style>
 </head>
 <body>
@@ -529,6 +561,59 @@
   function onPointerUp() { hidePressed(); pressedTile = null; }
 
   /* ===================================================================
+   * 磁贴“翻转 → 拉伸到全屏”过渡动画，动画结束后回调 done
+   * =================================================================== */
+  function playTileAnimation(tile, done)
+  {
+    var rect = tile.getBoundingClientRect();
+    var face = tile.querySelector('.tile-face');
+    var color = face ? window.getComputedStyle(face).backgroundColor : '#0067b8';
+    var iconEl = tile.querySelector('.tile-icon');
+    var titleEl = tile.querySelector('.tile-subject');
+
+    /* 创建从磁贴位置开始、逐渐放大覆盖全屏的过渡层 */
+    var tv = document.createElement('div');
+    tv.className = 'tile-tv';
+    tv.style.left = rect.left + 'px';
+    tv.style.top = rect.top + 'px';
+    tv.style.width = rect.width + 'px';
+    tv.style.height = rect.height + 'px';
+    tv.style.background = color;
+
+    var inner = document.createElement('div');
+    inner.className = 'tv-inner';
+    var iEl = document.createElement('div'); iEl.className = 'tv-icon';
+    iEl.textContent = iconEl ? iconEl.textContent : '';
+    var sEl = document.createElement('div'); sEl.className = 'tv-subject';
+    sEl.textContent = titleEl ? titleEl.textContent : '';
+    inner.appendChild(iEl); inner.appendChild(sEl);
+    tv.appendChild(inner);
+    document.body.appendChild(tv);
+    void tv.offsetWidth; /* reflow，确保起始状态生效 */
+
+    var scale = Math.max(window.innerWidth / rect.width, window.innerHeight / rect.height) * 1.03;
+    tv.style.transformOrigin = 'center center';
+    tv.style.transition = 'transform 0.30s cubic-bezier(.3,.8,.3,1)';
+    /* 阶段1：磁贴“翻起”并放大 */
+    tv.style.transform = 'rotateY(90deg) scale(1.7)';
+
+    setTimeout(function ()
+    {
+      /* 阶段2：翻回正面并拉伸到覆盖全屏 */
+      tv.style.transition = 'transform 0.32s cubic-bezier(.2,.7,.3,1)';
+      tv.style.transform = 'rotateY(0deg) scale(' + scale + ')';
+    }, 300);
+
+    setTimeout(function ()
+    {
+      if (done) done();                 /* 全屏定格后打开目标网页 */
+      tv.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+      tv.style.opacity = '0';
+      setTimeout(function () { tv.remove(); }, 380);
+    }, 640);
+  }
+
+  /* ===================================================================
    * 打开磁贴
    * =================================================================== */
   function openTile(t)
@@ -537,14 +622,27 @@
     var idx = +t.getAttribute('data-index');
     var cfg = CONFIG.tiles[idx];
     if (!cfg || !cfg.url || cfg.url === '#') { focusTile(curRow, curCol); return; }
+    var url = cfg.url;
 
-    /* 必须在用户手势的同步调用里 window.open，否则会被浏览器拦截为自动弹窗。
-       （原实现把它放进 setTimeout，导致链接没打开、只有放大动画播放而后消失） */
-    window.open(cfg.url, '_blank', 'noopener');
+    /* 在用户手势的同步调用里预留一个新标签页（about:blank），保证不被浏览器拦截；
+       动画播放完后再把该标签导航到目标网址。 */
+    var win = null;
+    try { win = window.open('about:blank', '_blank'); } catch (e) { win = null; }
 
-    /* 打开链接后播放放大反馈动画 */
-    t.classList.add('opening');
-    setTimeout(function () { t.classList.remove('opening'); }, 300);
+    if (win && !win.closed)
+    {
+      playTileAnimation(t, function ()
+      {
+        /* 断开与当前页的 opener 关联（安全），再跳转到目标网址 */
+        try { win.opener = null; win.location.href = url; } catch (e) {}
+      });
+    }
+    else
+    {
+      /* 浏览器不支持预留空标签：改为同步直接打开真实链接，保证一定能打开 */
+      try { window.open(url, '_blank', 'noopener'); } catch (e) {}
+      playTileAnimation(t, null);
+    }
   }
 
   function onClick(evt)
